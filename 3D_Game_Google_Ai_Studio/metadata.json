@@ -1,0 +1,6 @@
+{
+  "name": "Neon Hover Runner",
+  "description": "A high-octane 3D cyberpunk endless hoverboard runner featuring neon visuals, 3-lane acrobatic movement, procedural tracks, power-ups, synth audio, and dynamic leaderboards.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

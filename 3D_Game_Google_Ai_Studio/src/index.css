@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  body {
+    user-select: none;
+    touch-action: manipulation;
+    font-family: 'Rajdhani', sans-serif;
+  }
+}
+
+.font-orbitron {
+  font-family: 'Orbitron', sans-serif;
+}
+
+.font-rajdhani {
+  font-family: 'Rajdhani', sans-serif;
+}
+
+/* Neon glow text & box shadows */
+.text-neon-cyan {
+  color: #00f0ff;
+  text-shadow: 0 0 8px rgba(0, 240, 255, 0.7), 0 0 20px rgba(0, 240, 255, 0.4);
+}
+
+.text-neon-pink {
+  color: #ff007f;
+  text-shadow: 0 0 8px rgba(255, 0, 127, 0.7), 0 0 20px rgba(255, 0, 127, 0.4);
+}
+
+.text-neon-yellow {
+  color: #ffe600;
+  text-shadow: 0 0 8px rgba(255, 230, 0, 0.7), 0 0 20px rgba(255, 230, 0, 0.4);
+}
+
+.text-neon-green {
+  color: #00ff88;
+  text-shadow: 0 0 8px rgba(0, 255, 136, 0.7), 0 0 20px rgba(0, 255, 136, 0.4);
+}
+
+.box-neon-cyan {
+  border-color: #00f0ff;
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.4), inset 0 0 10px rgba(0, 240, 255, 0.15);
+}
+
+.box-neon-pink {
+  border-color: #ff007f;
+  box-shadow: 0 0 15px rgba(255, 0, 127, 0.4), inset 0 0 10px rgba(255, 0, 127, 0.15);
+}
+
+.box-neon-yellow {
+  border-color: #ffe600;
+  box-shadow: 0 0 15px rgba(255, 230, 0, 0.4), inset 0 0 10px rgba(255, 230, 0, 0.15);
+}
+
+/* Subtle CRT Scanline & grid overlay */
+.cyber-scanlines {
+  background: linear-gradient(
+    rgba(18, 16, 38, 0) 50%,
+    rgba(0, 0, 0, 0.25) 50%
+  ), linear-gradient(
+    90deg,
+    rgba(255, 0, 0, 0.03),
+    rgba(0, 255, 0, 0.01),
+    rgba(0, 0, 255, 0.03)
+  );
+  background-size: 100% 4px, 6px 100%;
+}
+
+.cyber-grid-bg {
+  background-image: 
+    linear-gradient(to right, rgba(0, 240, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 0, 127, 0.08) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* Custom Cyberpunk Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #08081a;
+}
+::-webkit-scrollbar-thumb {
+  background: #00f0ff88;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #00f0ff;
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.8; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.03); }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2.5s infinite ease-in-out;
+}
+
