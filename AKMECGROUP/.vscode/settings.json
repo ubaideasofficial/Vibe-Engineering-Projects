@@ -1,0 +1,13 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "npx create-next-app@latest": true,
+        "/^cd akmec-website; npm install framer-motion lucide-react react-hook-form zod; mkdir -p components/ui components/effects components/sections data styles public/media$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd \"d:\\\\Vibe Engineering with Ai Agents\\\\Vibe Engineering Projects\\\\Vibe-Engineering-Projects\\\\Personal_Ai_Clone\\\\AKMECGROUP\\\\akmec-website\" ; npm run build$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}
