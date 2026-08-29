@@ -78,4 +78,4 @@ You are a senior game + web engineer. Build a polished 3D endless runner game th
 *   A `README.md` detailing setup, env vars, deployment steps, and "Design Notes" on the difficulty ramp and performance choices.
 *   **Strict Constraint:** Do NOT use copyrighted models, textures, or audio. All assets must be CC0 (credited) or procedural. Keep files minimal.
 
-**NOW BUILD IT.** Generate the complete codebase based on these specifications.
+**NOW BUILD IT.** Generate the complete codebase based on these specifications.git
