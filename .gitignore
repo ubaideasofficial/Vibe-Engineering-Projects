@@ -1,0 +1,11 @@
+.vscode/
+**/node_modules/
+**/.next/
+**/.turbo/
+**/dist/
+**/build/
+**/.vercel/
+**/.cache/
+**/*.tsbuildinfo
+**/.DS_Store
+*.log
