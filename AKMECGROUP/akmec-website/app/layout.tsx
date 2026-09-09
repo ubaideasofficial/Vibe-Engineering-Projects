@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Header } from "../components/ui/Header";
 import { Footer } from "../components/ui/Footer";
 import { CookieNotice } from "../components/ui/CookieNotice";
+import { AKMECAssistant } from "../components/ui/AKMECAssistant";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -26,6 +27,7 @@ export default function RootLayout({
         </main>
         <Footer />
         <CookieNotice />
+        <AKMECAssistant />
 
         <script
           type="application/ld+json"
