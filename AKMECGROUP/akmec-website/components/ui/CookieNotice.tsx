@@ -1,20 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore, useState } from 'react';
 
 export function CookieNotice() {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const consent = localStorage.getItem('akmec-cookie-consent');
-    if (!consent) {
-      setVisible(true);
-    }
-  }, []);
+  const [dismissed, setDismissed] = useState(false);
+  const hasConsent = useSyncExternalStore(
+    () => () => undefined,
+    () => Boolean(localStorage.getItem('akmec-cookie-consent')),
+    () => false,
+  );
+  const visible = !dismissed && !hasConsent;
 
   const accept = () => {
     localStorage.setItem('akmec-cookie-consent', 'accepted');
-    setVisible(false);
+    setDismissed(true);
   };
 
   if (!visible) return null;
@@ -31,7 +30,7 @@ export function CookieNotice() {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => setVisible(false)}
+              onClick={() => setDismissed(true)}
               className="rounded-full border border-white/15 px-4 py-2 text-sm font-medium text-[var(--color-steel-200)] transition hover:border-white/30 hover:text-white"
             >
               Decline

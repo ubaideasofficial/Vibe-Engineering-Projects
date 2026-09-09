@@ -90,7 +90,7 @@ export function HeroSection() {
                 Request an Inspection
               </Link>
               <a 
-                href="/media/Company Profile_AKMEC LLP.pdf"
+                href="/company-profile.pdf"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="liquid inline-flex items-center px-8 py-4 text-white font-bold rounded-xl transition-all hover:bg-white/10"

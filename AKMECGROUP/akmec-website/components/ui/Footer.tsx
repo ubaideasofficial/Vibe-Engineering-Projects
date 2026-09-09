@@ -1,34 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { navigation } from '../../data/navigation';
 import type { NavMenu } from '../../data/navigation';
 import { offices } from '../../data/offices';
-
-function BrandLogo({ className = '' }: { className?: string }) {
-  const [hasError, setHasError] = useState(false);
-
-  if (hasError) {
-    return (
-      <div className={`flex items-center justify-center text-2xl font-black tracking-[-0.08em] text-white ${className}`} aria-label="AKMEC logo">
-        AKMEC
-      </div>
-    );
-  }
-
-  return (
-    <Image
-      src="/media/brand/akmec-logo-web.png"
-      alt="AKMEC Logo"
-      fill
-      sizes="(max-width: 1024px) 160px, 200px"
-      onError={() => setHasError(true)}
-      className={`object-contain object-left ${className}`}
-    />
-  );
-}
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -54,7 +31,7 @@ export function Footer() {
               AKMEC delivers complete industrial solutions — Inspection, Audit, Testing, Asset Integrity, Technical Solutions, Manpower Outsourcing & Training.
             </p>
             <div className="pt-2">
-              <a href="/media/Company Profile_AKMEC LLP.pdf" target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-sm font-bold text-[var(--color-safety)] hover:text-orange-400 transition-colors">
+              <a href="/company-profile.pdf" target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-sm font-bold text-[var(--color-safety)] hover:text-orange-400 transition-colors">
                 Download Company Profile
                 <svg className="w-4 h-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -87,9 +64,9 @@ export function Footer() {
             <h4 className="text-white font-display uppercase tracking-wider text-sm mb-6">Services</h4>
             <ul className="space-y-3">
               {(() => {
-                const servicesMenu = navigation.find((n): n is any => n.title === 'Services' && 'items' in n);
+                const servicesMenu = navigation.find((n): n is NavMenu => n.title === 'Services' && 'items' in n);
                 if (!servicesMenu) return null;
-                return servicesMenu.items.map((item: any, idx: number) => (
+                return servicesMenu.items.map((item, idx) => (
                   <li key={idx}>
                     <Link href={item.href} className="text-[var(--color-steel-300)] hover:text-white text-sm transition-colors">
                       {item.title}

@@ -13,7 +13,7 @@ export async function POST(request: Request) {
       message: 'Quote request submitted successfully.',
       data: payload,
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 }
