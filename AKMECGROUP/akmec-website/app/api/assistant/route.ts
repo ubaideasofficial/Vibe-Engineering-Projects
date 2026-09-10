@@ -90,7 +90,9 @@ export async function POST(request: Request) {
   const apiKey = getApiKey();
 
   if (!apiKey) {
-    return NextResponse.json({ error: 'The assistant is not configured yet.' }, { status: 503 });
+    return NextResponse.json({
+      error: 'The assistant is not configured. Add OPEN_ROUTER_API_KEY to the Vercel Production environment and redeploy.',
+    }, { status: 503 });
   }
 
   try {
