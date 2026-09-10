@@ -1,0 +1,17 @@
+{
+  "name": "mcp-forge-mvp",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace @mcp-forge/api\" \"npm run dev --workspace @mcp-forge/web\"",
+    "build": "npm run build --workspace @mcp-forge/api && npm run build --workspace @mcp-forge/web",
+    "typecheck": "npm run typecheck --workspace @mcp-forge/core && npm run typecheck --workspace @mcp-forge/api && npm run typecheck --workspace @mcp-forge/web"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "typescript": "^5.7.3"
+  }
+}

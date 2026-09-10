@@ -1,0 +1,23 @@
+{
+  "name": "@mcp-forge/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@mcp-forge/core": "0.1.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "nanoid": "^5.0.9"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.5"
+  }
+}
