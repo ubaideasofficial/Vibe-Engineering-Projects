@@ -29,18 +29,20 @@ export function LiquidGlass({ children, className = '', interactive = false, ...
     if (interactive) setOpacity(0);
   };
 
+  const hasExplicitRadius = /rounded-(sm|md|lg|xl|2xl|3xl|\[)/.test(className);
+
   return (
     <div
       ref={divRef}
       onMouseMove={handleMouseMove}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      className={`liquid rounded-full ${className}`}
+      className={`liquid ${hasExplicitRadius ? '' : 'rounded-full'} ${className}`}
       {...props}
     >
       {interactive && (
         <motion.div
-          className="pointer-events-none absolute -inset-px rounded-full opacity-0 transition duration-300"
+          className="pointer-events-none absolute -inset-px rounded-[inherit] opacity-0 transition duration-300"
           animate={{ opacity }}
           style={{
             background: `radial-gradient(400px circle at ${position.x}px ${position.y}px, rgba(255,255,255,0.15), transparent 40%)`,

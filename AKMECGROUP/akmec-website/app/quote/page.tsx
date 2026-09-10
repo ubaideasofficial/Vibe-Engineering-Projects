@@ -22,8 +22,9 @@ export default function QuotePage() {
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const { register, handleSubmit, trigger, formState: { errors } } = useForm<QuoteFormData>({
+  const { register, handleSubmit, trigger, reset, formState: { errors } } = useForm<QuoteFormData>({
     resolver: zodResolver(quoteSchema)
   });
 
@@ -38,6 +39,7 @@ export default function QuotePage() {
 
   const onSubmit = async (data: QuoteFormData) => {
     setIsSubmitting(true);
+    setErrorMessage(null);
 
     try {
       const response = await fetch('/api/quote', {
@@ -46,13 +48,17 @@ export default function QuotePage() {
         body: JSON.stringify(data),
       });
 
+      const resJson = await response.json().catch(() => ({}));
+
       if (!response.ok) {
-        throw new Error('Request failed');
+        throw new Error(resJson.error || 'Failed to submit quote request. Please try again.');
       }
 
       setIsSuccess(true);
+      reset();
     } catch (error) {
-      console.error('Quote submission failed', error);
+      const msg = error instanceof Error ? error.message : 'Unable to submit quote request right now. Please try again or email inquiry@akmecgroup.com.';
+      setErrorMessage(msg);
       setIsSuccess(false);
     } finally {
       setIsSubmitting(false);
@@ -105,6 +111,12 @@ export default function QuotePage() {
             </div>
 
             <form onSubmit={handleSubmit(onSubmit)}>
+              {errorMessage && (
+                <div className="mb-6 bg-red-500/10 border border-red-500/30 text-red-300 px-6 py-4 rounded-xl text-sm font-medium" role="alert">
+                  {errorMessage}
+                </div>
+              )}
+              <input type="text" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" {...register("hp_field" as any)} />
               {/* Step 1 */}
               <div className={step === 1 ? 'block' : 'hidden'}>
                 <h3 className="text-xl font-display font-bold text-white mb-6">1. Project Details</h3>

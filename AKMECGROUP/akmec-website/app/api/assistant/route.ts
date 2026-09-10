@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { certifications } from '../../../data/certifications';
@@ -8,6 +6,7 @@ import { industries } from '../../../data/industries';
 import { offices } from '../../../data/offices';
 import { services } from '../../../data/services';
 import { stats } from '../../../data/stats';
+import { checkRateLimit, getClientIp } from '../../../lib/rate-limit';
 
 const requestSchema = z.object({
   messages: z.array(z.object({
@@ -16,31 +15,10 @@ const requestSchema = z.object({
   })).min(1).max(12),
 });
 
-function getWorkspaceEnvValue(name: string) {
-  if (process.env[name]) return process.env[name];
+const model = process.env.OPEN_ROUTER_MODEL || 'z-ai/glm-5.2:free';
 
-  const envPaths = [
-    join(process.cwd(), '.env'),
-    join(process.cwd(), '..', '.env'),
-    join(process.cwd(), '..', '..', '.env'),
-  ];
-
-  for (const envPath of envPaths) {
-    try {
-      const envFile = readFileSync(/* turbopackIgnore: true */ envPath, 'utf8');
-      const match = envFile.match(new RegExp(`^${name}\\s*=\\s*["']?([^"'\\r\\n]+)["']?\\s*$`, 'm'));
-      if (match?.[1]) return match[1].trim();
-    } catch {
-    }
-  }
-
-  return undefined;
-}
-
-const model = getWorkspaceEnvValue('OPEN_ROUTER_MODEL') || 'z-ai/glm-5.2:free';
-
-function getApiKey() {
-  return getWorkspaceEnvValue('OPEN_ROUTER_API_KEY');
+function getApiKey(): string | undefined {
+  return process.env.OPEN_ROUTER_API_KEY;
 }
 
 function buildCompanyContext() {
@@ -87,11 +65,25 @@ VERIFIED COMPANY CONTEXT:
 ${buildCompanyContext()}`;
 
 export async function POST(request: Request) {
+  // Rate limiting: max 10 requests per minute per IP to protect against token exhaustion
+  const ip = getClientIp(request);
+  const rateLimit = checkRateLimit(`assistant_${ip}`, 10, 60 * 1000);
+
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: `Too many requests. Please wait ${rateLimit.retryAfterSeconds} seconds before asking another question.` },
+      {
+        status: 429,
+        headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) },
+      }
+    );
+  }
+
   const apiKey = getApiKey();
 
   if (!apiKey) {
     return NextResponse.json({
-      error: 'The assistant is not configured. Add OPEN_ROUTER_API_KEY to the Vercel Production environment and redeploy.',
+      error: 'The assistant service is currently unavailable. Please contact inquiry@akmecgroup.com.',
     }, { status: 503 });
   }
 
@@ -118,12 +110,11 @@ export async function POST(request: Request) {
     });
 
     if (!response.ok) {
-      const providerError = await response.text();
-      console.error('OpenRouter assistant error:', response.status, providerError);
-      const errorMessage = response.status === 404 && model === 'z-ai/glm-5.2:free'
-        ? 'The requested free model is currently unavailable on OpenRouter. Set OPEN_ROUTER_MODEL to an available model to enable the assistant.'
-        : 'The assistant is temporarily unavailable. Please try again.';
-      return NextResponse.json({ error: errorMessage }, { status: 502 });
+      console.error('OpenRouter assistant error status:', response.status);
+      return NextResponse.json(
+        { error: 'The assistant is temporarily unavailable. Please try again or contact inquiry@akmecgroup.com.' },
+        { status: 502 }
+      );
     }
 
     const result = await response.json();
@@ -133,7 +124,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'The assistant returned an empty answer.' }, { status: 502 });
     }
 
-    return NextResponse.json({ answer: answer.trim(), model });
+    return NextResponse.json({ answer: answer.trim() });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: 'Please send a question under 4,000 characters.' }, { status: 400 });

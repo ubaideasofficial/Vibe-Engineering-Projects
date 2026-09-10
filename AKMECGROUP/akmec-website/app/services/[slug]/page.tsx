@@ -2,15 +2,42 @@ import React from 'react';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { services } from '../../../data/services';
 import { GlassPanel } from '../../../components/effects/GlassPanel';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
 
-// Next.js 15+ dynamic params
+// Next.js dynamic params
 export async function generateStaticParams() {
   return services.map((service) => ({
     slug: service.slug,
   }));
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const resolvedParams = await params;
+  const service = services.find((s) => s.slug === resolvedParams.slug);
+
+  if (!service) {
+    return {
+      title: 'Service Not Found | AKMEC LLP',
+    };
+  }
+
+  return {
+    title: `${service.title} | Industrial Solutions | AKMEC LLP`,
+    description: service.shortDescription,
+    openGraph: {
+      title: `${service.title} | AKMEC LLP`,
+      description: service.shortDescription,
+      images: [
+        {
+          url: service.thumbnail,
+          alt: service.title,
+        },
+      ],
+    },
+  };
 }
 
 export default async function ServicePage({ params }: { params: Promise<{ slug: string }> }) {

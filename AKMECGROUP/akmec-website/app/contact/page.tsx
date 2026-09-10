@@ -20,13 +20,15 @@ type ContactFormData = z.infer<typeof contactSchema>;
 export default function ContactPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
-  const { register, handleSubmit, formState: { errors } } = useForm<ContactFormData>({
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<ContactFormData>({
     resolver: zodResolver(contactSchema)
   });
 
   const onSubmit = async (data: ContactFormData) => {
     setIsSubmitting(true);
+    setErrorMessage(null);
 
     try {
       const response = await fetch('/api/contact', {
@@ -35,13 +37,17 @@ export default function ContactPage() {
         body: JSON.stringify(data),
       });
 
+      const resJson = await response.json().catch(() => ({}));
+
       if (!response.ok) {
-        throw new Error('Request failed');
+        throw new Error(resJson.error || 'Failed to submit contact form. Please try again.');
       }
 
       setIsSuccess(true);
+      reset();
     } catch (error) {
-      console.error('Contact submission failed', error);
+      const msg = error instanceof Error ? error.message : 'Unable to send message right now. Please try again or email inquiry@akmecgroup.com.';
+      setErrorMessage(msg);
       setIsSuccess(false);
     } finally {
       setIsSubmitting(false);
@@ -128,6 +134,12 @@ export default function ContactPage() {
               </div>
             ) : (
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                {errorMessage && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-2xl text-sm font-medium" role="alert">
+                    {errorMessage}
+                  </div>
+                )}
+                <input type="text" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" {...register("hp_field" as any)} />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-bold text-[var(--color-steel-700)] mb-2 ml-4">Full Name</label>

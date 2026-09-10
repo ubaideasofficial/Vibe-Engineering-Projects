@@ -64,13 +64,18 @@ export function Header() {
                     className="relative group"
                     onMouseEnter={() => setIsServicesMenuOpen(true)}
                     onMouseLeave={() => setIsServicesMenuOpen(false)}
+                    onBlur={(e) => {
+                      if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                        setIsServicesMenuOpen(false);
+                      }
+                    }}
                   >
                     <button
                       type="button"
+                      aria-haspopup="true"
+                      aria-expanded={isServicesMenuOpen}
                       className="flex items-center text-sm font-medium text-slate-800 hover:text-slate-950 transition-colors py-2"
                       onClick={() => setIsServicesMenuOpen((prev) => !prev)}
-                      onFocus={() => setIsServicesMenuOpen(true)}
-                      onBlur={() => setIsServicesMenuOpen(false)}
                     >
                       {item.title}
                       <ChevronDown className={`ml-1 w-4 h-4 transition-transform ${isServicesMenuOpen ? 'rotate-180' : ''}`} />
@@ -122,7 +127,8 @@ export function Header() {
             <button 
               className="md:hidden p-2 text-slate-800 hover:text-slate-950 focus:outline-none"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              aria-label="Toggle menu"
+              aria-label="Toggle navigation menu"
+              aria-expanded={isMobileMenuOpen}
             >
               {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
