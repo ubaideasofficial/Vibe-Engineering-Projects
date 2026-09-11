@@ -14,6 +14,12 @@ npm run dev
 
 The dashboard runs on `http://localhost:3000`; the API and MCP runtime run on `http://localhost:4000`.
 
+Supabase provides persistence and authentication data; it does not run this Node API or
+the MCP runtime. For a public MCP URL, deploy the API and worker on a persistent VM/VPS
+using the included `Dockerfile` and `docker-compose.production.yml`, then put Caddy or
+another HTTPS reverse proxy in front of port 4000. Set `MCP_PUBLIC_URL` to the public
+HTTPS origin in the production environment.
+
 The generator fetches robots.txt, maps public links, records JSON XHR/fetch traffic with Playwright, classifies endpoints, asks OpenRouter for a validated two-tool capability spec, persists that spec under `data/sites.json`, and serves the generated tools at `/mcp/:siteId`.
 
 The generated tools are read-only, rate-limited to one request per second per origin, cached briefly, and refuse paths disallowed by robots.txt. Browser discovery and browser-backed tools require the Playwright Chromium install above.

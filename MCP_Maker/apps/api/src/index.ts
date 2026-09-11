@@ -1,74 +1,71 @@
-import "dotenv/config";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import dotenv from "dotenv";
 import cors from "cors";
 import express from "express";
 import { nanoid } from "nanoid";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { crawlSite, type CrawlResult } from "@mcp-forge/crawler";
-import { sniffNetwork, type NetworkRecord } from "@mcp-forge/network-sniffer";
-import { classifyEndpoints } from "@mcp-forge/endpoint-classifier";
-import { synthesizeCapabilities } from "@mcp-forge/capability-synth";
 import { createGeneratedServer } from "@mcp-forge/mcp-codegen";
-import { generateRequestSchema, capabilitySpecSchema, type CapabilitySpec, type Job, type JobEvent, type JobPhase } from "@mcp-forge/core";
+import { generateRequestSchema, type Job, type JobEvent, type JobPhase } from "@mcp-forge/core";
+import { createJobRepository, createSiteRepository, type JobRepository, type SiteRepository } from "@mcp-forge/storage";
+import { BullMqGenerationQueue, LocalGenerationQueue, type GenerationQueue } from "@mcp-forge/job-queue";
+import { executeGeneration } from "@mcp-forge/generation-pipeline";
+
+dotenv.config({ path: join(process.cwd(), "../../.env"), override: true });
 
 const app = express();
-const jobs = new Map<string, Job>();
 const port = Number(process.env.API_PORT ?? 4000);
-const dataDirectory = join(process.cwd(), "data");
-const sitesFile = join(dataDirectory, "sites.json");
-const sites = new Map<string, { spec: CapabilitySpec; disallowedPaths: string[] }>();
+const ownerId = process.env.MCP_OWNER_ID ?? "local";
+const localDataRoot = process.env.MCP_DATA_FILE ?? join(process.cwd(), "../../data/sites.json");
+const siteRepository: SiteRepository = createSiteRepository({
+  mode: process.env.STORAGE_MODE,
+  localFile: localDataRoot,
+  supabaseUrl: process.env.SUPABASE_URL,
+  supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY
+});
+const jobRepository: JobRepository = createJobRepository({
+  mode: process.env.STORAGE_MODE,
+  localFile: localDataRoot.replace(/sites\.json$/, "jobs.json"),
+  supabaseUrl: process.env.SUPABASE_URL,
+  supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY
+});
 
 app.use(cors({ origin: process.env.WEB_ORIGIN ?? "http://localhost:3000" }));
 app.use(express.json());
 
-async function loadSites(): Promise<void> {
-  await mkdir(dataDirectory, { recursive: true });
-  try {
-    const saved = JSON.parse(await readFile(sitesFile, "utf8")) as Record<string, { spec: CapabilitySpec; disallowedPaths: string[] }>;
-    for (const [siteId, site] of Object.entries(saved)) sites.set(siteId, site);
-  } catch { await writeFile(sitesFile, "{}", "utf8"); }
+async function persistJob(job: Job): Promise<void> {
+  await jobRepository.save(job);
 }
 
-async function saveSite(siteId: string, spec: CapabilitySpec, disallowedPaths: string[]): Promise<void> {
-  sites.set(siteId, { spec, disallowedPaths });
-  await writeFile(sitesFile, JSON.stringify(Object.fromEntries(sites), null, 2), "utf8");
+function hydrateJobResult(job: Job): Job {
+  if (job.result && !job.result.mcpUrl) {
+    return { ...job, result: { ...job.result, mcpUrl: `${process.env.MCP_PUBLIC_URL ?? `http://localhost:${port}`}/mcp/${job.result.siteId}` } };
+  }
+  return job;
 }
 
 function addEvent(job: Job, phase: JobPhase, message: string): void {
-  const event: JobEvent = { phase, message, timestamp: new Date().toISOString() };
-  job.events.push(event);
+  job.events.push({ phase, message, timestamp: new Date().toISOString() });
 }
 
-async function runPipeline(job: Job): Promise<void> {
-  const siteId = nanoid(10).toLowerCase();
-  try {
-    addEvent(job, "crawling", "Fetching robots.txt, sitemap, and public links");
-    const crawl: CrawlResult = await crawlSite(job.url);
-    addEvent(job, "sniffing", "Recording JSON XHR/fetch traffic with Playwright");
-    let records: NetworkRecord[] = [];
-    try { records = await sniffNetwork(job.url, crawl.searchPage ?? job.url); } catch (error) { addEvent(job, "sniffing", `Browser discovery unavailable; using HTML fallback (${String(error)})`); }
-    addEvent(job, "classifying", `Classifying ${records.length} JSON network responses`);
-    const classification = classifyEndpoints(records);
-    addEvent(job, "synthesizing", process.env.OPEN_ROUTER_API_KEY ? "Synthesizing capabilities with OpenRouter" : "Synthesizing validated local fallback capabilities");
-    const spec = capabilitySpecSchema.parse(await synthesizeCapabilities({ crawl, classification, records }));
-    await saveSite(siteId, spec, crawl.disallowedPaths);
-    job.status = "ready";
-    job.result = { siteId, mcpUrl: `${process.env.MCP_PUBLIC_URL ?? `http://localhost:${port}`}/mcp/${siteId}` };
-    addEvent(job, "ready", "Generated MCP tools and persisted the site spec");
-  } catch (error) {
-    job.status = "failed";
-    job.error = error instanceof Error ? error.message : String(error);
-    addEvent(job, "failed", job.error);
-  }
-}
+const generationQueue: GenerationQueue = process.env.QUEUE_MODE === "redis" && process.env.REDIS_URL
+  ? new BullMqGenerationQueue({
+      host: new URL(process.env.REDIS_URL).hostname,
+      port: Number(new URL(process.env.REDIS_URL).port || 6379),
+      username: new URL(process.env.REDIS_URL).username || undefined,
+      password: new URL(process.env.REDIS_URL).password || undefined,
+      tls: new URL(process.env.REDIS_URL).protocol === "rediss:" ? {} : undefined,
+      maxRetriesPerRequest: null
+    })
+  : new LocalGenerationQueue(async ({ jobId, ownerId: queuedOwner }) => {
+      await executeGeneration({ jobId, ownerId: queuedOwner, url: (await jobRepository.get(jobId, queuedOwner))?.url ?? "", siteType: (await jobRepository.get(jobId, queuedOwner))?.siteType ?? "blog" }, { jobs: jobRepository, sites: siteRepository, publicUrl: process.env.MCP_PUBLIC_URL ?? `http://localhost:${port}` });
+    });
 
 app.get("/health", (_request, response) => {
   response.json({ ok: true, service: "mcp-forge-api" });
 });
 
 app.post("/mcp/:siteId", async (request, response) => {
-  const site = sites.get(request.params.siteId);
+  const site = await siteRepository.get(request.params.siteId, ownerId);
   if (!site) { response.status(404).json({ error: "Generated site not found" }); return; }
   const server = createGeneratedServer(site.spec, site.disallowedPaths);
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
@@ -86,39 +83,45 @@ app.post("/mcp/:siteId", async (request, response) => {
   }
 });
 
-app.post("/api/generate", (request, response) => {
-  const parsed = generateRequestSchema.safeParse(request.body);
-  if (!parsed.success) {
-    response.status(400).json({ error: "Provide a valid URL and supported site type" });
-    return;
-  }
+app.post("/api/generate", async (request, response) => {
+  try {
+    const parsed = generateRequestSchema.safeParse(request.body);
+    if (!parsed.success) {
+      response.status(400).json({ error: "Provide a valid URL and supported site type" });
+      return;
+    }
 
-  const job: Job = {
-    id: nanoid(12),
-    url: parsed.data.url,
-    siteType: parsed.data.siteType,
-    status: "running",
-    events: []
-  };
-  addEvent(job, "queued", "Generation job accepted");
-  jobs.set(job.id, job);
-  void runPipeline(job);
-  response.status(202).json({ jobId: job.id });
+    const job: Job = {
+      id: nanoid(12),
+      ownerId,
+      url: parsed.data.url,
+      siteType: parsed.data.siteType,
+      status: "running",
+      events: []
+    };
+    addEvent(job, "queued", "Generation job accepted");
+    await persistJob(job);
+    await generationQueue.add({ jobId: job.id, ownerId, url: job.url, siteType: job.siteType });
+    response.status(202).json({ jobId: job.id });
+  } catch (error) {
+    console.error("Generation request failed", error);
+    response.status(503).json({ error: "Generation storage or queue is unavailable" });
+  }
 });
 
-app.get("/api/status/:jobId", (request, response) => {
-  const job = jobs.get(request.params.jobId);
+app.get("/api/status/:jobId", async (request, response) => {
+  const job = await jobRepository.get(request.params.jobId, ownerId);
   if (!job) {
     response.status(404).json({ error: "Job not found" });
     return;
   }
 
-  response.json(job);
+  response.json(hydrateJobResult(job));
 });
 
-app.get("/api/status/:jobId/stream", (request, response) => {
-  const job = jobs.get(request.params.jobId);
-  if (!job) {
+app.get("/api/status/:jobId/stream", async (request, response) => {
+  const initialJob = await jobRepository.get(request.params.jobId, ownerId);
+  if (!initialJob) {
     response.status(404).end();
     return;
   }
@@ -129,9 +132,12 @@ app.get("/api/status/:jobId/stream", (request, response) => {
   response.flushHeaders();
 
   let sent = 0;
-  const send = (): void => {
+  const send = async (): Promise<void> => {
+    const storedJob = await jobRepository.get(request.params.jobId, ownerId);
+    const job = storedJob ? hydrateJobResult(storedJob) : undefined;
+    if (!job) return;
     const events = job.events.slice(sent);
-    events.forEach((event) => response.write(`data: ${JSON.stringify(event)}\n\n`));
+    events.forEach((event: JobEvent) => response.write(`data: ${JSON.stringify(event)}\n\n`));
     sent = job.events.length;
     if (job.status !== "running") {
       response.write(`event: complete\ndata: ${JSON.stringify(job)}\n\n`);
@@ -139,10 +145,11 @@ app.get("/api/status/:jobId/stream", (request, response) => {
       clearInterval(timer);
     }
   };
-  const timer = setInterval(send, 250);
-  send();
+  const timer = setInterval(() => { void send(); }, 250);
+  void send();
   request.on("close", () => clearInterval(timer));
 });
 
-await loadSites();
+await siteRepository.load();
+await jobRepository.load();
 app.listen(port, () => console.log(`MCP Forge API listening on http://localhost:${port}`));

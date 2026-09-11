@@ -25,6 +25,7 @@ export type JobEvent = {
 
 export type Job = {
   id: string;
+  ownerId?: string;
   url: string;
   siteType: SiteType;
   status: "running" | "ready" | "failed";

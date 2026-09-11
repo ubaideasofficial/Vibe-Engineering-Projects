@@ -1,0 +1,20 @@
+{
+  "name": "@mcp-forge/storage",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "tsx --test test/**/*.test.ts"
+  },
+  "dependencies": {
+    "@mcp-forge/core": "0.1.0",
+    "@supabase/supabase-js": "^2.49.8"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2"
+  }
+}

@@ -296,3 +296,77 @@ Keep LLM usage isolated to discovery/reasoning steps only — code generation it
 must be deterministic/templated for reliability and reproducibility.
 Log every discovery decision (why a capability was created, from which evidence) for
 debuggability and for regenerating/fixing later without re-running full analysis.
+
+---
+
+## 14. PRODUCTION ARCHITECTURE (FREE-FIRST)
+
+The production platform uses one multi-tenant MCP runtime. Do not create one server
+process per generated website. Each generated site is a persisted capability spec served
+under `/mcp/:siteId` by the shared runtime.
+
+Recommended free-first deployment:
+
+| Concern | Service | Responsibility |
+|---|---|---|
+| Dashboard | Vercel | Next.js UI, authentication screens, job progress, install snippets |
+| Database/Auth | Supabase free tier | PostgreSQL, Supabase Auth, row-level security, capability specs, jobs |
+| Queue | Upstash Redis + BullMQ | Durable generation jobs and retries |
+| API + MCP runtime | Oracle Cloud Always Free VM or equivalent VPS | Long-lived Express API, Streamable HTTP MCP, HTTPS reverse proxy |
+| Discovery worker | Docker container on the VPS | Playwright, crawler, network interception, capability synthesis |
+| Object storage | Supabase Storage | HAR files, screenshots, generated package artifacts |
+| DNS/TLS | Cloudflare DNS + Caddy/Nginx | Public HTTPS URL and certificate renewal |
+| LLM | OpenRouter | Discovery reasoning only, via `OPEN_ROUTER_API_KEY` |
+
+Vercel is for the dashboard only. Playwright, long-running discovery jobs, and the
+Streamable HTTP runtime must run on a persistent Node process, not a short-lived
+serverless function.
+
+Required public production URL: `https://mcpforge.app/mcp/:siteId`.
+Local development URL: `http://localhost:4000/mcp/:siteId`.
+
+The API key must never be committed, logged, sent to the browser, or written into a
+plan/document. Use environment variables and rotate any key exposed in chat or source.
+
+## 15. TENANCY AND DATA MODEL
+
+Every record is owned by a user or organization. The minimum persistent model is:
+
+- `users` / Supabase Auth identity
+- `sites`: source URL, owner, slug, status, robots policy, timestamps
+- `capability_specs`: validated spec and discovery evidence
+- `generation_jobs`: status, phase, logs, error, retry count
+- `mcp_tokens`: hashed access tokens with revocation and expiry
+- `tool_runs`: latency, status, target host, and bounded error metadata
+
+Supabase Row Level Security is mandatory for user-owned records. The MCP runtime must
+validate the site token before loading a capability spec. Never expose another tenant's
+site by guessing a `siteId`.
+
+## 16. PRODUCTION BUILD PHASES
+
+1. **Foundation:** environment validation, Supabase schema/client, persistent repositories,
+   tenant ownership fields, generated `.env.example`, and local fallback for development.
+2. **Durable jobs:** BullMQ/Upstash queue, worker process, retry/backoff, job persistence,
+   and SSE status sourced from the database.
+3. **Discovery quality:** sitemap/depth-limited crawl, Playwright explorer, network capture,
+   endpoint evidence, robots enforcement, and private-network/redirect SSRF protection.
+4. **Capability generation:** OpenRouter classification/synthesis with strict Zod validation,
+   deterministic fallback, evidence logging, and reviewable capability specs.
+5. **Execution/runtime:** API-call and browser tools with timeouts, caching, per-origin rate
+   limits, MCP auth tokens, tool health checks, and Streamable HTTP session handling.
+6. **Sandboxing:** isolate browser automation in Docker/worker boundaries, cap CPU/memory,
+   block destructive actions, and never execute arbitrary LLM-generated code on the host.
+7. **Clients and packaging:** remote URL plus stdio package/config snippets for Claude,
+   Cursor, Codex, Windsurf, and Cline.
+8. **Operations:** HTTPS deployment, structured logs, health checks, usage quotas, alerts,
+   scheduled validation, and documented backup/restore.
+
+## 17. FREE-TIER OPERATING RULES
+
+- Keep generated MCP servers read-only by default.
+- Enforce per-user generation quotas and per-origin request limits.
+- Never promise zero-cost unlimited usage; free tiers sleep, expire, or have quotas.
+- Store only bounded HAR/response data and redact cookies, authorization headers, and tokens.
+- A local server is valid for development only. Production clients require a stable public
+  HTTPS runtime and persistent storage.

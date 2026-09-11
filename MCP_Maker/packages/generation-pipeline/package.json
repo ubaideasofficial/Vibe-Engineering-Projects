@@ -1,0 +1,21 @@
+{
+  "name": "@mcp-forge/generation-pipeline",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@mcp-forge/capability-synth": "0.1.0",
+    "@mcp-forge/core": "0.1.0",
+    "@mcp-forge/crawler": "0.1.0",
+    "@mcp-forge/endpoint-classifier": "0.1.0",
+    "@mcp-forge/network-sniffer": "0.1.0",
+    "@mcp-forge/storage": "0.1.0",
+    "nanoid": "^5.0.9"
+  }
+}
