@@ -29,6 +29,12 @@ export default async function CareersPage() {
     supabase.auth.getUser(),
   ]);
 
+  let isAdmin = false;
+  if (user) {
+    const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single();
+    isAdmin = Boolean(profile?.is_admin);
+  }
+
   return (
     <div className="pt-24 bg-[var(--color-steel-050)] min-h-screen">
       {/* Hero */}
@@ -44,7 +50,7 @@ export default async function CareersPage() {
               </p>
             </div>
             <div className="flex justify-center md:justify-end">
-              <AuthNav isAuthenticated={!!user} />
+              <AuthNav isAuthenticated={!!user} isAdmin={isAdmin} />
             </div>
           </div>
         </div>

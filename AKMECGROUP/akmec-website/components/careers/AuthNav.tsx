@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '../../lib/supabase/client';
 
-export function AuthNav({ isAuthenticated }: { isAuthenticated: boolean }) {
+export function AuthNav({ isAuthenticated, isAdmin }: { isAuthenticated: boolean; isAdmin?: boolean }) {
   const router = useRouter();
   const [isSigningOut, setIsSigningOut] = React.useState(false);
 
@@ -25,6 +25,14 @@ export function AuthNav({ isAuthenticated }: { isAuthenticated: boolean }) {
         >
           My Dashboard
         </Link>
+        {isAdmin && (
+          <Link
+            href="/careers/admin"
+            className="text-sm font-bold text-[var(--color-safety)] hover:text-orange-400 transition-colors"
+          >
+            Admin
+          </Link>
+        )}
         <button
           onClick={handleSignOut}
           disabled={isSigningOut}

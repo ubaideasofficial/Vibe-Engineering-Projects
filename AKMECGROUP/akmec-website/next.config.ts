@@ -33,7 +33,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https://www.akmecgroup.com",
       "font-src 'self' data:",
-      "connect-src 'self' https://openrouter.ai",
+      "connect-src 'self' https://openrouter.ai https://*.supabase.co",
       "frame-ancestors 'none'",
       "form-action 'self'",
       "base-uri 'self'",

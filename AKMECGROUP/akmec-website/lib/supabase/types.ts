@@ -18,6 +18,7 @@ export interface Profile {
   full_name: string;
   phone: string | null;
   headline: string | null;
+  is_admin?: boolean;
 }
 
 export type ApplicationStatus = 'submitted' | 'reviewing' | 'shortlisted' | 'rejected' | 'hired';

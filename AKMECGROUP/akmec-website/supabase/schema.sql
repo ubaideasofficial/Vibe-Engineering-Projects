@@ -110,6 +110,47 @@ create policy "Candidates read own resumes"
     and auth.uid()::text = (storage.foldername(name))[1]
   );
 
+-- ── admin access ────────────────────────────────────────────────────────────
+-- Run this section again on an existing project to pick up admin support.
+alter table public.profiles add column if not exists is_admin boolean not null default false;
+
+-- security definer so it can read profiles.is_admin regardless of the caller's
+-- own RLS visibility (a non-admin can only see their own profile row).
+create or replace function public.is_admin()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select coalesce((select is_admin from public.profiles where id = auth.uid()), false);
+$$;
+
+drop policy if exists "Admins manage jobs" on public.jobs;
+create policy "Admins manage jobs"
+  on public.jobs for all
+  using (public.is_admin())
+  with check (public.is_admin());
+
+drop policy if exists "Admins view all applications" on public.applications;
+create policy "Admins view all applications"
+  on public.applications for select
+  using (public.is_admin());
+
+drop policy if exists "Admins update applications" on public.applications;
+create policy "Admins update applications"
+  on public.applications for update
+  using (public.is_admin())
+  with check (public.is_admin());
+
+drop policy if exists "Admins read all resumes" on storage.objects;
+create policy "Admins read all resumes"
+  on storage.objects for select
+  using (bucket_id = 'resumes' and public.is_admin());
+
+-- To make a candidate an admin, after they sign up once, run in the SQL editor:
+--   update public.profiles set is_admin = true where id = '<their-auth-user-uuid>';
+
 -- ── seed: sample open positions (safe to edit/remove) ──────────────────────
 insert into public.jobs (slug, title, department, location, employment_type, experience_level, summary, description, requirements)
 values
