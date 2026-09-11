@@ -41,6 +41,10 @@ export const navigation: (NavLink | NavMenu)[] = [
     href: '/clients'
   },
   {
+    title: 'Careers',
+    href: '/careers'
+  },
+  {
     title: 'Contact',
     href: '/contact'
   }
