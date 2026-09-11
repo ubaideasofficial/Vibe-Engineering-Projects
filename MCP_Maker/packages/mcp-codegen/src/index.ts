@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { chromium } from "playwright";
 import { isDisallowed } from "@mcp-forge/crawler";
-import type { CapabilitySpec } from "@mcp-forge/core";
+import { assertPublicHostname, safeFetch, type CapabilitySpec } from "@mcp-forge/core";
 import { z } from "zod";
 
 const lastRequest = new Map<string, number>();
@@ -31,12 +31,18 @@ async function execute(capability: CapabilitySpec["capabilities"][number], args:
   const hit = cache.get(key); if (hit && hit.expires > Date.now()) return hit.value;
   let result: unknown;
   if (capability.executionStrategy === "api-call" && capability.apiTemplate) {
-    const response = await fetch(target, { method: capability.apiTemplate.method, headers: capability.apiTemplate.headers, signal: AbortSignal.timeout(20000) });
+    const response = await safeFetch(target, { method: capability.apiTemplate.method, headers: capability.apiTemplate.headers, signal: AbortSignal.timeout(20000) });
     if (!response.ok) throw new Error(`Target returned HTTP ${response.status}`);
     result = await response.json();
   } else if (capability.browserScript) {
+    await assertPublicHostname(url.hostname);
     const browser = await chromium.launch({ headless: true });
-    try { const page = await browser.newPage(); await page.goto(target, { waitUntil: "domcontentloaded", timeout: 30000 }); result = { title: await page.locator(capability.browserScript.selectors.title ?? "title").first().textContent(), content: await page.locator(capability.browserScript.selectors.content ?? "body").first().textContent() }; } finally { await browser.close(); }
+    try {
+      const page = await browser.newPage();
+      await page.goto(target, { waitUntil: "domcontentloaded", timeout: 30000 });
+      await assertPublicHostname(new URL(page.url()).hostname);
+      result = { title: await page.locator(capability.browserScript.selectors.title ?? "title").first().textContent(), content: await page.locator(capability.browserScript.selectors.content ?? "body").first().textContent() };
+    } finally { await browser.close(); }
   }
   cache.set(key, { expires: Date.now() + 30000, value: result });
   return result;

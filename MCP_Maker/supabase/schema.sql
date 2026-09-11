@@ -27,6 +27,7 @@ create table if not exists public.generation_jobs (
   logs jsonb not null default '[]'::jsonb,
   error text,
   retry_count integer not null default 0,
+  checkpoint jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

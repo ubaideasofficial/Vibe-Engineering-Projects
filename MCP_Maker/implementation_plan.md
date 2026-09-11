@@ -118,16 +118,16 @@ Exit checks: a generated spec survives API restart, local adapter tests pass, an
 - [x] API local mode now dispatches generation through the queue abstraction.
 - [x] Shared generation pipeline extracted for API-local and Redis-worker execution.
 - [x] Pipeline persists all phase updates through the job repository.
-- [ ] Add restart/resume and per-user quota tests.
+- [x] Add restart/resume and per-user quota tests.
 
 ## Phase 3 Status
 
 - [x] Sitemap discovery from robots declarations and `/sitemap.xml`.
 - [x] Bounded depth-two same-origin link discovery.
 - [x] Robots filtering applied to sitemap and crawled links.
-- [ ] Request evidence redaction/schema extraction.
-- [ ] Detail-page navigation after search/list discovery.
-- [ ] DNS-level private-network and redirect validation.
+- [x] Request evidence redaction/schema extraction.
+- [x] Detail-page navigation after search/list discovery.
+- [x] DNS-level private-network and redirect validation.
 
 ## Deployment Status
 

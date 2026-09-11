@@ -5,8 +5,8 @@ import express from "express";
 import { nanoid } from "nanoid";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { createGeneratedServer } from "@mcp-forge/mcp-codegen";
-import { generateRequestSchema, type Job, type JobEvent, type JobPhase } from "@mcp-forge/core";
-import { createJobRepository, createSiteRepository, type JobRepository, type SiteRepository } from "@mcp-forge/storage";
+import { assertPublicHostname, generateRequestSchema, type Job, type JobEvent, type JobPhase } from "@mcp-forge/core";
+import { checkGenerationQuota, createJobRepository, createSiteRepository, type JobRepository, type SiteRepository } from "@mcp-forge/storage";
 import { BullMqGenerationQueue, LocalGenerationQueue, type GenerationQueue } from "@mcp-forge/job-queue";
 import { executeGeneration } from "@mcp-forge/generation-pipeline";
 
@@ -91,13 +91,27 @@ app.post("/api/generate", async (request, response) => {
       return;
     }
 
+    try {
+      await assertPublicHostname(new URL(parsed.data.url).hostname);
+    } catch {
+      response.status(400).json({ error: "The URL resolves to a private or unreachable address" });
+      return;
+    }
+
+    const quota = await checkGenerationQuota(jobRepository, ownerId);
+    if (!quota.allowed) {
+      response.status(429).json({ error: quota.reason });
+      return;
+    }
+
     const job: Job = {
       id: nanoid(12),
       ownerId,
       url: parsed.data.url,
       siteType: parsed.data.siteType,
       status: "running",
-      events: []
+      events: [],
+      createdAt: new Date().toISOString()
     };
     addEvent(job, "queued", "Generation job accepted");
     await persistJob(job);

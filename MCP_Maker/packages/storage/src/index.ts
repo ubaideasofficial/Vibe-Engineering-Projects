@@ -82,6 +82,7 @@ export interface JobRepository {
   load(): Promise<void>;
   get(jobId: string, ownerId?: string): Promise<Job | undefined>;
   save(job: Job): Promise<void>;
+  listByOwner(ownerId: string): Promise<Job[]>;
 }
 
 export class LocalJobRepository implements JobRepository {
@@ -108,6 +109,10 @@ export class LocalJobRepository implements JobRepository {
     this.jobs.set(job.id, job);
     await writeFile(this.filePath, JSON.stringify(Object.fromEntries(this.jobs), null, 2), "utf8");
   }
+
+  async listByOwner(ownerId: string): Promise<Job[]> {
+    return [...this.jobs.values()].filter((job) => job.ownerId === ownerId);
+  }
 }
 
 export class SupabaseJobRepository implements JobRepository {
@@ -119,20 +124,42 @@ export class SupabaseJobRepository implements JobRepository {
 
   async load(): Promise<void> {}
 
+  private toJob(row: SupabaseJobRow): Job {
+    return {
+      id: row.job_id,
+      ownerId: row.owner_id,
+      url: row.source_url,
+      siteType: row.site_type,
+      status: row.status,
+      events: row.logs ?? [],
+      createdAt: row.created_at,
+      checkpoint: row.checkpoint ?? undefined,
+      error: row.error,
+      ...(row.site_id ? { result: { siteId: row.site_id, mcpUrl: "" } } : {})
+    };
+  }
+
   async get(jobId: string, ownerId: string): Promise<Job | undefined> {
-    const { data, error } = await this.client.from("generation_jobs").select("job_id, owner_id, source_url, site_type, status, phase, logs, error, site_id").eq("job_id", jobId).eq("owner_id", ownerId).maybeSingle();
+    const { data, error } = await this.client.from("generation_jobs").select("job_id, owner_id, source_url, site_type, status, phase, logs, error, site_id, created_at, checkpoint").eq("job_id", jobId).eq("owner_id", ownerId).maybeSingle();
     if (error) throw error;
     if (!data) return undefined;
-    const row = data as { job_id: string; owner_id: string; source_url: string; site_type: Job["siteType"]; status: Job["status"]; phase: string; logs: Job["events"]; error?: string; site_id?: string };
-    return { id: row.job_id, ownerId: row.owner_id, url: row.source_url, siteType: row.site_type, status: row.status, events: row.logs ?? [], error: row.error, ...(row.site_id ? { result: { siteId: row.site_id, mcpUrl: "" } } : {}) };
+    return this.toJob(data as SupabaseJobRow);
   }
 
   async save(job: Job): Promise<void> {
     const resultSiteId = job.result?.siteId;
-    const { error } = await this.client.from("generation_jobs").upsert({ job_id: job.id, owner_id: job.ownerId, source_url: job.url, site_type: job.siteType, status: job.status, phase: job.events.at(-1)?.phase ?? "queued", logs: job.events, error: job.error, site_id: resultSiteId ?? null, updated_at: new Date().toISOString() }, { onConflict: "job_id" });
+    const { error } = await this.client.from("generation_jobs").upsert({ job_id: job.id, owner_id: job.ownerId, source_url: job.url, site_type: job.siteType, status: job.status, phase: job.events.at(-1)?.phase ?? "queued", logs: job.events, error: job.error, site_id: resultSiteId ?? null, checkpoint: job.checkpoint ?? {}, updated_at: new Date().toISOString() }, { onConflict: "job_id" });
     if (error) throw error;
   }
+
+  async listByOwner(ownerId: string): Promise<Job[]> {
+    const { data, error } = await this.client.from("generation_jobs").select("job_id, owner_id, source_url, site_type, status, phase, logs, error, site_id, created_at, checkpoint").eq("owner_id", ownerId);
+    if (error) throw error;
+    return ((data ?? []) as SupabaseJobRow[]).map((row) => this.toJob(row));
+  }
 }
+
+type SupabaseJobRow = { job_id: string; owner_id: string; source_url: string; site_type: Job["siteType"]; status: Job["status"]; phase: string; logs: Job["events"]; error?: string; site_id?: string; created_at?: string; checkpoint?: Record<string, unknown> };
 
 export function createJobRepository(options: { mode?: string; localFile: string; supabaseUrl?: string; supabaseServiceRoleKey?: string }): JobRepository {
   if (options.mode === "supabase" && options.supabaseUrl && options.supabaseServiceRoleKey) return new SupabaseJobRepository(options.supabaseUrl, options.supabaseServiceRoleKey);
@@ -146,4 +173,23 @@ export function createMcpToken(): { token: string; hash: string } {
 
 export function hashMcpToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
+}
+
+export type QuotaLimits = { maxConcurrentJobs: number; maxJobsPerDay: number };
+export type QuotaResult = { allowed: true } | { allowed: false; reason: string };
+
+export const DEFAULT_QUOTA_LIMITS: QuotaLimits = { maxConcurrentJobs: 2, maxJobsPerDay: 20 };
+
+export async function checkGenerationQuota(jobs: JobRepository, ownerId: string, limits: QuotaLimits = DEFAULT_QUOTA_LIMITS): Promise<QuotaResult> {
+  const ownerJobs = await jobs.listByOwner(ownerId);
+  const running = ownerJobs.filter((job) => job.status === "running").length;
+  if (running >= limits.maxConcurrentJobs) {
+    return { allowed: false, reason: `You already have ${running} generation job(s) running; wait for one to finish before starting another.` };
+  }
+  const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
+  const today = ownerJobs.filter((job) => job.createdAt && new Date(job.createdAt).getTime() >= dayAgo).length;
+  if (today >= limits.maxJobsPerDay) {
+    return { allowed: false, reason: `Daily generation limit of ${limits.maxJobsPerDay} reached; try again tomorrow.` };
+  }
+  return { allowed: true };
 }

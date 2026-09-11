@@ -1,3 +1,5 @@
+import { safeFetch } from "@mcp-forge/core";
+
 export type CrawlResult = {
   url: string;
   name: string;
@@ -37,7 +39,7 @@ export function isDisallowed(pathname: string, rules: string[]): boolean {
 }
 
 async function fetchPage(url: string): Promise<string> {
-  const response = await fetch(url, { signal: AbortSignal.timeout(15000), headers: { "user-agent": "MCP-Forge/0.1 discovery" } });
+  const response = await safeFetch(url, { signal: AbortSignal.timeout(15000), headers: { "user-agent": "MCP-Forge/0.1 discovery" } });
   if (!response.ok) throw new Error(`Target returned HTTP ${response.status}`);
   return response.text();
 }
@@ -62,7 +64,7 @@ async function discoverLinks(base: URL, seedLinks: string[], rules: string[]): P
 
 export async function crawlSite(inputUrl: string): Promise<CrawlResult> {
   const base = new URL(inputUrl);
-  const robotsResponse = await fetch(new URL("/robots.txt", base), { signal: AbortSignal.timeout(10000) }).catch(() => undefined);
+  const robotsResponse = await safeFetch(new URL("/robots.txt", base), { signal: AbortSignal.timeout(10000) }).catch(() => undefined);
   const robotsTxt = robotsResponse?.ok ? await robotsResponse.text() : "";
   const disallowedPaths = parseRobots(robotsTxt);
   const html = await fetchPage(base.toString());

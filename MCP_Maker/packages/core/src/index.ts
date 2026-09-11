@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { isPrivateHostnameLiteral } from "./net-safety.js";
+
+export * from "./net-safety.js";
 
 export const siteTypeSchema = z.enum(["ecommerce", "blog", "news", "directory"]);
 export type SiteType = z.infer<typeof siteTypeSchema>;
@@ -6,9 +9,7 @@ export type SiteType = z.infer<typeof siteTypeSchema>;
 export const generateRequestSchema = z.object({
   url: z.string().url().refine((value) => {
     const parsed = new URL(value);
-    const host = parsed.hostname.toLowerCase();
-    const privateHost = host === "localhost" || host === "::1" || host.endsWith(".local") || host.startsWith("127.") || host.startsWith("10.") || host.startsWith("192.168.") || /^172\.(1[6-9]|2\d|3[01])\./.test(host);
-    return (parsed.protocol === "http:" || parsed.protocol === "https:") && !privateHost;
+    return (parsed.protocol === "http:" || parsed.protocol === "https:") && !isPrivateHostnameLiteral(parsed.hostname);
   }, "Only public http and https URLs are supported"),
   siteType: siteTypeSchema.default("blog")
 });
@@ -30,6 +31,9 @@ export type Job = {
   siteType: SiteType;
   status: "running" | "ready" | "failed";
   events: JobEvent[];
+  createdAt?: string;
+  /** Cached intermediate discovery artifacts, keyed by pipeline step, so a retried/resumed job can skip already-completed network work. */
+  checkpoint?: Record<string, unknown>;
   result?: {
     siteId: string;
     mcpUrl: string;
