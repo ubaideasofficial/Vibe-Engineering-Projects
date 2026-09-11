@@ -10,14 +10,22 @@
   },
   "dependencies": {
     "@mcp-forge/core": "0.1.0",
+    "@mcp-forge/capability-synth": "0.1.0",
+    "@mcp-forge/crawler": "0.1.0",
+    "@mcp-forge/endpoint-classifier": "0.1.0",
+    "@mcp-forge/mcp-codegen": "0.1.0",
+    "@mcp-forge/network-sniffer": "0.1.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
     "express": "^4.21.2",
-    "nanoid": "^5.0.9"
+    "nanoid": "^5.0.9",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
-    "tsx": "^4.19.2",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
-    "@types/node": "^22.10.5"
+    "@types/node": "^22.10.5",
+    "tsx": "^4.19.2"
   }
 }

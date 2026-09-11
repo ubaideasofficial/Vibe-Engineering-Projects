@@ -7,8 +7,8 @@
   ],
   "scripts": {
     "dev": "concurrently \"npm run dev --workspace @mcp-forge/api\" \"npm run dev --workspace @mcp-forge/web\"",
-    "build": "npm run build --workspace @mcp-forge/api && npm run build --workspace @mcp-forge/web",
-    "typecheck": "npm run typecheck --workspace @mcp-forge/core && npm run typecheck --workspace @mcp-forge/api && npm run typecheck --workspace @mcp-forge/web"
+    "build": "npm run build --workspace @mcp-forge/core && npm run build --workspace @mcp-forge/crawler && npm run build --workspace @mcp-forge/network-sniffer && npm run build --workspace @mcp-forge/endpoint-classifier && npm run build --workspace @mcp-forge/capability-synth && npm run build --workspace @mcp-forge/mcp-codegen && npm run build --workspace @mcp-forge/api && npm run build --workspace @mcp-forge/web",
+    "typecheck": "npm run typecheck --workspace @mcp-forge/core && npm run typecheck --workspace @mcp-forge/crawler && npm run typecheck --workspace @mcp-forge/network-sniffer && npm run typecheck --workspace @mcp-forge/endpoint-classifier && npm run typecheck --workspace @mcp-forge/capability-synth && npm run typecheck --workspace @mcp-forge/mcp-codegen && npm run typecheck --workspace @mcp-forge/api && npm run typecheck --workspace @mcp-forge/web"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",

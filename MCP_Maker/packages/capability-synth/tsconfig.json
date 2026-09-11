@@ -1,0 +1,1 @@
+{"extends":"../../tsconfig.base.json","compilerOptions":{"module":"NodeNext","outDir":"dist","declaration":true,"rootDir":"src"},"include":["src/**/*.ts"]}
