@@ -3,8 +3,8 @@ services:
     build: .
     restart: unless-stopped
     env_file: .env.production
-    ports:
-      - "4000:4000"
+    expose:
+      - "4000"
     command: ["node", "apps/api/dist/index.js"]
     depends_on:
       - redis
@@ -24,5 +24,22 @@ services:
     volumes:
       - redis-data:/data
 
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      MCP_DOMAIN: ${MCP_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - api
+
 volumes:
   redis-data:
+  caddy-data:
+  caddy-config:
