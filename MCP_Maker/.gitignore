@@ -4,4 +4,5 @@ implementation.md
 node_modules/
 dist/
 .next/
+out/
 data/
