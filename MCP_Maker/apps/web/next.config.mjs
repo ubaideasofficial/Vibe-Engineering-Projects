@@ -6,8 +6,7 @@ const appDirectory = path.dirname(fileURLToPath(import.meta.url));
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ["@mcp-forge/core"],
-  outputFileTracingRoot: path.join(appDirectory, "../.."),
-  distDir: "../../.next"
+  outputFileTracingRoot: path.join(appDirectory, "../..")
 };
 
 export default nextConfig;
