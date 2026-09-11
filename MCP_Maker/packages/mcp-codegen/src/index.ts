@@ -13,7 +13,9 @@ function inputShape(capability: CapabilitySpec["capabilities"][number]): Record<
   return Object.fromEntries(Object.entries(properties).map(([key, value]) => { const schema = value.type === "number" ? z.number() : z.string(); return [key, required.has(key) ? schema : schema.optional()]; }));
 }
 
-function applyTemplate(template: string, args: Record<string, unknown>): string {
+export function applyTemplate(template: string, args: Record<string, unknown>): string {
+  const wholePlaceholder = template.match(/^{{(\w+)}}$/);
+  if (wholePlaceholder) return String(args[wholePlaceholder[1]] ?? "");
   return template.replace(/{{(\w+)}}/g, (_, key: string) => encodeURIComponent(String(args[key] ?? "")));
 }
 
